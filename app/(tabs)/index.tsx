@@ -26,20 +26,70 @@ type PinData = {
 
 const PIN_RADIUS = 8;
 
-const INITIAL_PINS: PinData[] = [
-  { id: 'pin-1', x: width * 0.25, y: 180, type: 'normal' },
-  { id: 'pin-2', x: width * 0.5, y: 180, type: 'evolution' },
-  { id: 'pin-3', x: width * 0.75, y: 180, type: 'normal' },
+const PIN_ROWS = 5;
+const PINS_PER_ROW = 4;
+const EVOLUTION_PIN_COUNT = 2;
 
-  { id: 'pin-4', x: width * 0.15, y: 250, type: 'normal' },
-  { id: 'pin-5', x: width * 0.4, y: 250, type: 'normal' },
-  { id: 'pin-6', x: width * 0.65, y: 250, type: 'evolution' },
-  { id: 'pin-7', x: width * 0.9, y: 250, type: 'normal' },
+const assignEvolutionPins = (
+  pins: PinData[]
+): PinData[] => {
+  const shuffledIndexes = pins
+    .map((_, index) => index)
+    .sort(() => Math.random() - 0.5);
 
-  { id: 'pin-8', x: width * 0.25, y: 320, type: 'normal' },
-  { id: 'pin-9', x: width * 0.5, y: 320, type: 'normal' },
-  { id: 'pin-10', x: width * 0.75, y: 320, type: 'normal' },
-];
+  const evolutionIndexes = new Set(
+    shuffledIndexes.slice(0, EVOLUTION_PIN_COUNT)
+  );
+
+  return pins.map((pin, index) => ({
+    ...pin,
+    type: evolutionIndexes.has(index)
+      ? 'evolution'
+      : 'normal',
+  }));
+};
+
+const createRandomPins = (): PinData[] => {
+  const pins: PinData[] = [];
+
+  for (let row = 0; row < PIN_ROWS; row += 1) {
+    const rowY = 160 + row * 75;
+    const isOffsetRow = row % 2 === 1;
+
+    for (let column = 0; column < PINS_PER_ROW; column += 1) {
+      const baseX =
+        width * 0.14 +
+        column * (width * 0.24) +
+        (isOffsetRow ? width * 0.1 : 0);
+
+      const randomX = Math.random() * 30 - 15;
+      const randomY = Math.random() * 20 - 10;
+
+      pins.push({
+        id: `pin-${row}-${column}-${Date.now()}`,
+        x: Math.min(
+          width - PIN_RADIUS - 10,
+          Math.max(PIN_RADIUS + 10, baseX + randomX)
+        ),
+        y: rowY + randomY,
+        type: 'normal',
+      });
+    }
+  }
+
+  return assignEvolutionPins(pins);
+};
+
+const createRandomStartX = () => {
+  const sidePadding = BALL_RADIUS + 30;
+
+  return (
+    sidePadding +
+    Math.random() * (width - sidePadding * 2)
+  );
+};
+
+const FIRST_PINS = createRandomPins();
 
 type Rarity = 1 | 2 | 3;
 
@@ -47,6 +97,9 @@ export default function HomeScreen() {
   const engineRef = useRef<Matter.Engine | null>(null);
   const ballRef = useRef<Matter.Body | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+
+  const currentPinsRef =
+    useRef<PinData[]>(FIRST_PINS);
 
   const [ballPosition, setBallPosition] = useState({
     x: width / 2,
@@ -56,20 +109,22 @@ export default function HomeScreen() {
   const [showResult, setShowResult] = useState(false);
 
   const [visiblePins, setVisiblePins] =
-    useState<PinData[]>(INITIAL_PINS);
+    useState<PinData[]>(FIRST_PINS);
 
   const [rarity, setRarity] = useState<Rarity>(1);
 
-    const getBallColor = () => {
-      switch (rarity) {
-        case 2:
-          return '#facc15';
-        case 3:
-          return '#ec4899';
-        default:
-          return '#3b82f6';
-      }
-    };
+  const [hitPinIds, setHitPinIds] = useState<string[]>([]);
+
+  const getBallColor = () => {
+    switch (rarity) {
+      case 2:
+        return '#facc15';
+      case 3:
+        return '#ec4899';
+      default:
+        return '#3b82f6';
+    }
+  };
 
   useEffect(() => {
     startGame();
@@ -102,16 +157,22 @@ export default function HomeScreen() {
   const startGame = () => {
     stopEngine();
 
+    const newPins = createRandomPins();
+    const startX = createRandomStartX();
+
+    currentPinsRef.current = newPins;
+
     setShowResult(false);
     setRarity(1);
-    setVisiblePins([...INITIAL_PINS]);
+    setVisiblePins(newPins);
+    setHitPinIds([]);
 
     setBallPosition({
-      x: width / 2,
+      x: startX,
       y: START_Y,
     });
 
-    const pins = INITIAL_PINS.map((pin) =>
+    const pins = newPins.map((pin) =>
       Matter.Bodies.circle(
         pin.x,
         pin.y,
@@ -161,7 +222,7 @@ export default function HomeScreen() {
     engine.world.gravity.y = 1;
 
     const ball = Matter.Bodies.circle(
-      width / 2,
+      startX,
       START_Y,
       BALL_RADIUS,
       {
@@ -215,13 +276,22 @@ export default function HomeScreen() {
           });
         }
 
-        setVisiblePins((currentPins) =>
-          currentPins.filter((pin) => pin.id !== pinId)
-        );
+        setHitPinIds((currentIds) => [
+          ...currentIds,
+          pinId,
+        ]);
 
-        requestAnimationFrame(() => {
+        setTimeout(() => {
+          setVisiblePins((currentPins) =>
+            currentPins.filter((pin) => pin.id !== pinId)
+          );
+
+          setHitPinIds((currentIds) =>
+            currentIds.filter((id) => id !== pinId)
+          );
+
           Matter.World.remove(engine.world, pinBody);
-        });
+        }, 180);
       });
     };
 
@@ -267,21 +337,31 @@ export default function HomeScreen() {
       <Text style={styles.title}>Pinball Gacha</Text>
 
       <View style={styles.gameArea}>
-        {visiblePins.map((pin) => (
-          <View
-            key={pin.id}
-            style={[
-              styles.pin,
-              pin.type === 'evolution'
-                ? styles.evolutionPin
-                : styles.normalPin,
-              {
-                left: pin.x - PIN_RADIUS,
-                top: pin.y - PIN_RADIUS,
-              },
-            ]}
-          />
-        ))}
+        {visiblePins.map((pin) => {
+          const isHit = hitPinIds.includes(pin.id);
+
+          return (
+            <View
+              key={pin.id}
+              style={[
+                styles.pin,
+                pin.type === 'evolution'
+                  ? styles.evolutionPin
+                  : styles.normalPin,
+                isHit && styles.hitPin,
+                {
+                  left: pin.x - PIN_RADIUS,
+                  top: pin.y - PIN_RADIUS,
+                  transform: [
+                    {
+                      scale: isHit ? 1.7 : 1,
+                    },
+                  ],
+                },
+              ]}
+            />
+          );
+        })}
 
         {!showResult && (
           <View
@@ -426,5 +506,17 @@ const styles = StyleSheet.create({
       width: 0,
       height: 0,
     },
+  },
+  hitPin: {
+    backgroundColor: '#ffffff',
+    borderColor: '#ffffff',
+    shadowColor: '#ffffff',
+    shadowOpacity: 1,
+    shadowRadius: 18,
+    shadowOffset: {
+      width: 0,
+      height: 0,
+    },
+    elevation: 12,
   },
 });
