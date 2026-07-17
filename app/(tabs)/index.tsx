@@ -15,7 +15,47 @@ const BALL_RADIUS = 18;
 const START_Y = 50;
 const RESULT_LINE_Y = height - 130;
 
-type PinType = 'normal' | 'evolution';
+type PinType = 'normal' | 'gold' | 'rainbow';
+type UpgradePinType = 'gold' | 'rainbow';
+
+type Rarity = 'white' | 'gold' | 'rainbow';
+
+const getPinTypeFromLabel = (
+  label: string
+): PinType | null => {
+  if (label.startsWith('normal-pin:')) {
+    return 'normal';
+  }
+
+  if (label.startsWith('gold-pin:')) {
+    return 'gold';
+  }
+
+  if (label.startsWith('rainbow-pin:')) {
+    return 'rainbow';
+  }
+
+  return null;
+};
+
+const evolveRarity = (
+  currentRarity: Rarity,
+  pinType: UpgradePinType
+): Rarity => {
+  if (currentRarity === 'rainbow') {
+    return 'rainbow';
+  }
+
+  if (pinType === 'rainbow') {
+    return 'rainbow';
+  }
+
+  if (currentRarity === 'gold') {
+    return 'rainbow';
+  }
+
+  return 'gold';
+};
 
 type PinData = {
   id: string;
@@ -28,25 +68,47 @@ const PIN_RADIUS = 8;
 
 const PIN_ROWS = 5;
 const PINS_PER_ROW = 4;
-const EVOLUTION_PIN_COUNT = 2;
+const GOLD_PIN_COUNT = 3;
+const RAINBOW_PIN_COUNT = 1;
 
-const assignEvolutionPins = (
+const assignUpgradePins = (
   pins: PinData[]
 ): PinData[] => {
   const shuffledIndexes = pins
     .map((_, index) => index)
     .sort(() => Math.random() - 0.5);
 
-  const evolutionIndexes = new Set(
-    shuffledIndexes.slice(0, EVOLUTION_PIN_COUNT)
+  const rainbowIndexes = new Set(
+    shuffledIndexes.slice(0, RAINBOW_PIN_COUNT)
   );
 
-  return pins.map((pin, index) => ({
-    ...pin,
-    type: evolutionIndexes.has(index)
-      ? 'evolution'
-      : 'normal',
-  }));
+  const goldIndexes = new Set(
+    shuffledIndexes.slice(
+      RAINBOW_PIN_COUNT,
+      RAINBOW_PIN_COUNT + GOLD_PIN_COUNT
+    )
+  );
+
+  return pins.map((pin, index) => {
+    if (rainbowIndexes.has(index)) {
+      return {
+        ...pin,
+        type: 'rainbow',
+      };
+    }
+
+    if (goldIndexes.has(index)) {
+      return {
+        ...pin,
+        type: 'gold',
+      };
+    }
+
+    return {
+      ...pin,
+      type: 'normal',
+    };
+  });
 };
 
 const createRandomPins = (): PinData[] => {
@@ -77,7 +139,7 @@ const createRandomPins = (): PinData[] => {
     }
   }
 
-  return assignEvolutionPins(pins);
+  return assignUpgradePins(pins);
 };
 
 const createRandomStartX = () => {
@@ -90,8 +152,6 @@ const createRandomStartX = () => {
 };
 
 const FIRST_PINS = createRandomPins();
-
-type Rarity = 1 | 2 | 3;
 
 export default function HomeScreen() {
   const engineRef = useRef<Matter.Engine | null>(null);
@@ -108,21 +168,25 @@ export default function HomeScreen() {
 
   const [showResult, setShowResult] = useState(false);
 
-  const [visiblePins, setVisiblePins] =
-    useState<PinData[]>(FIRST_PINS);
+  const [visiblePins, setVisiblePins] = useState<PinData[]>(FIRST_PINS);
 
-  const [rarity, setRarity] = useState<Rarity>(1);
+  const [rarity, setRarity] =
+    useState<Rarity>('white');
+
+  const rarityRef = useRef<Rarity>('white');
 
   const [hitPinIds, setHitPinIds] = useState<string[]>([]);
 
   const getBallColor = () => {
     switch (rarity) {
-      case 2:
+      case 'gold':
         return '#facc15';
-      case 3:
-        return '#ec4899';
+
+      case 'rainbow':
+        return '#f472b6';
+
       default:
-        return '#3b82f6';
+        return '#f8fafc';
     }
   };
 
@@ -163,7 +227,8 @@ export default function HomeScreen() {
     currentPinsRef.current = newPins;
 
     setShowResult(false);
-    setRarity(1);
+    rarityRef.current = 'white';
+    setRarity('white');
     setVisiblePins(newPins);
     setHitPinIds([]);
 
@@ -179,15 +244,32 @@ export default function HomeScreen() {
         PIN_RADIUS,
         {
           isStatic: true,
-          isSensor: pin.type === 'evolution',
-          restitution: pin.type === 'normal' ? 0.9 : 0,
+
+          // 金と虹はすり抜ける
+          isSensor: pin.type !== 'normal',
+
+          restitution:
+            pin.type === 'normal' ? 0.9 : 0,
+
           friction: 0,
-          label: pin.type === 'normal'
-            ? `normal-pin:${pin.id}`
-            : `evolution-pin:${pin.id}`,
+
+          label: `${pin.type}-pin:${pin.id}`,
         }
       )
     );
+
+    const pinBodiesById = new Map<
+      string,
+      Matter.Body
+    >();
+
+    pins.forEach((pinBody) => {
+      const [, pinId] = pinBody.label.split(':');
+
+      if (pinId) {
+        pinBodiesById.set(pinId, pinBody);
+      }
+    });
 
     const WALL_WIDTH = 30;
 
@@ -254,25 +336,63 @@ export default function HomeScreen() {
 
         const pinBody = bodies.find(
           (body) =>
-            body.label.startsWith('normal-pin:') ||
-            body.label.startsWith('evolution-pin:')
+            getPinTypeFromLabel(body.label) !== null
         );
 
         if (!ballBody || !pinBody) return;
+
+        if (rarityRef.current === 'rainbow') {
+          return;
+        }
 
         const [, pinId] = pinBody.label.split(':');
 
         if (!pinId || removedPinIds.has(pinId)) return;
 
+        const pinType = getPinTypeFromLabel(
+          pinBody.label
+        );
+
+        if (!pinType) {
+          return;
+        }
+
+        const isUpgradePin =
+          pinType === 'gold' ||
+          pinType === 'rainbow';      
+
         removedPinIds.add(pinId);
 
-        if (pinBody.label.startsWith('evolution-pin:')) {
+        if (isUpgradePin) {
           setRarity((currentRarity) => {
-            if (currentRarity === 3) {
-              return 3;
+            const nextRarity = evolveRarity(
+              currentRarity,
+              pinType
+            );
+
+            rarityRef.current = nextRarity;
+
+            const becameRainbow =
+              currentRarity !== 'rainbow' &&
+              nextRarity === 'rainbow';
+
+            if (becameRainbow) {
+              setTimeout(() => {
+                setVisiblePins([]);
+                setHitPinIds([]);
+
+                pinBodiesById.forEach((body) => {
+                  Matter.World.remove(
+                    engine.world,
+                    body
+                  );
+                });
+
+                pinBodiesById.clear();
+              }, 180);
             }
 
-            return (currentRarity + 1) as Rarity;
+            return nextRarity;
           });
         }
 
@@ -345,9 +465,9 @@ export default function HomeScreen() {
               key={pin.id}
               style={[
                 styles.pin,
-                pin.type === 'evolution'
-                  ? styles.evolutionPin
-                  : styles.normalPin,
+                pin.type === 'gold' && styles.goldPin,
+                pin.type === 'rainbow' && styles.rainbowPin,
+                pin.type === 'normal' && styles.normalPin,
                 isHit && styles.hitPin,
                 {
                   left: pin.x - PIN_RADIUS,
@@ -394,7 +514,9 @@ export default function HomeScreen() {
             />
 
             <Text style={styles.resultText}>
-              レアリティ{rarity}
+              {rarity === 'white' && '白'}
+              {rarity === 'gold' && '金'}
+              {rarity === 'rainbow' && '虹'}
             </Text>
 
             <Pressable
@@ -495,17 +617,32 @@ const styles = StyleSheet.create({
     borderColor: '#94a3b8',
   },
 
-  evolutionPin: {
+  goldPin: {
     backgroundColor: '#facc15',
     borderWidth: 2,
     borderColor: '#ffffff',
     shadowColor: '#facc15',
     shadowOpacity: 1,
-    shadowRadius: 10,
+    shadowRadius: 14,
     shadowOffset: {
       width: 0,
       height: 0,
     },
+    elevation: 10,
+  },
+
+  rainbowPin: {
+    backgroundColor: '#ffffff',
+    borderWidth: 3,
+    borderColor: '#ec4899',
+    shadowColor: '#22d3ee',
+    shadowOpacity: 1,
+    shadowRadius: 18,
+    shadowOffset: {
+      width: 0,
+      height: 0,
+    },
+    elevation: 14,
   },
   hitPin: {
     backgroundColor: '#ffffff',
