@@ -15,6 +15,11 @@ const BALL_RADIUS = 18;
 const START_Y = 50;
 const RESULT_LINE_Y = height - 130;
 
+const UPGRADE_PIN_SLOW_DISTANCE = 80;
+
+const NORMAL_TIME_SCALE = 1;
+const SLOW_TIME_SCALE = 0.35;
+
 type PinType = 'normal' | 'gold' | 'rainbow';
 type UpgradePinType = 'gold' | 'rainbow';
 
@@ -157,6 +162,8 @@ export default function HomeScreen() {
   const engineRef = useRef<Matter.Engine | null>(null);
   const ballRef = useRef<Matter.Body | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const isSlowMotionRef = useRef(false);
+  const spotlightPinIdRef = useRef<string | null>(null);
 
   const currentPinsRef =
     useRef<PinData[]>(FIRST_PINS);
@@ -176,6 +183,16 @@ export default function HomeScreen() {
   const rarityRef = useRef<Rarity>('white');
 
   const [hitPinIds, setHitPinIds] = useState<string[]>([]);
+
+  const [isSpotlightActive, setIsSpotlightActive] =
+    useState(false);
+
+  const [spotlightPin, setSpotlightPin] = useState<{
+    id: string;
+    x: number;
+    y: number;
+    type: 'gold' | 'rainbow';
+  } | null>(null);
 
   const getBallColor = () => {
     switch (rarity) {
@@ -216,6 +233,12 @@ export default function HomeScreen() {
     }
 
     ballRef.current = null;
+
+    isSlowMotionRef.current = false;
+    spotlightPinIdRef.current = null;
+
+    setIsSpotlightActive(false);
+    setSpotlightPin(null);
   };
 
   const startGame = () => {
@@ -227,8 +250,16 @@ export default function HomeScreen() {
     currentPinsRef.current = newPins;
 
     setShowResult(false);
+
     rarityRef.current = 'white';
     setRarity('white');
+
+    isSlowMotionRef.current = false;
+    spotlightPinIdRef.current = null;
+
+    setIsSpotlightActive(false);
+    setSpotlightPin(null);
+
     setVisiblePins(newPins);
     setHitPinIds([]);
 
@@ -359,7 +390,17 @@ export default function HomeScreen() {
 
         const isUpgradePin =
           pinType === 'gold' ||
-          pinType === 'rainbow';      
+          pinType === 'rainbow';
+
+        if (isUpgradePin) {
+          engine.timing.timeScale = NORMAL_TIME_SCALE;
+
+          isSlowMotionRef.current = false;
+          spotlightPinIdRef.current = null;
+
+          setIsSpotlightActive(false);
+          setSpotlightPin(null);
+        }
 
         removedPinIds.add(pinId);
 
@@ -411,6 +452,8 @@ export default function HomeScreen() {
           );
 
           Matter.World.remove(engine.world, pinBody);
+
+          pinBodiesById.delete(pinId);
         }, 180);
       });
     };
@@ -426,10 +469,125 @@ export default function HomeScreen() {
 
     let lastTime = Date.now();
 
+    const updateSlowMotion = () => {
+      if (rarityRef.current === 'rainbow') {
+        if (isSlowMotionRef.current) {
+          engine.timing.timeScale =
+            NORMAL_TIME_SCALE;
+
+          isSlowMotionRef.current = false;
+        }
+
+        if (spotlightPinIdRef.current !== null) {
+          spotlightPinIdRef.current = null;
+
+          setIsSpotlightActive(false);
+          setSpotlightPin(null);
+        }
+
+        return;
+      }
+
+      let nearestUpgradePin: {
+        id: string;
+        body: Matter.Body;
+        type: UpgradePinType;
+        distance: number;
+      } | null = null;
+
+      for (const [pinId, pinBody] of pinBodiesById) {
+        if (removedPinIds.has(pinId)) {
+          continue;
+        }
+
+        const pinType = getPinTypeFromLabel(
+          pinBody.label
+        );
+
+        if (
+          pinType !== 'gold' &&
+          pinType !== 'rainbow'
+        ) {
+          continue;
+        }
+
+        const distanceX =
+          ball.position.x - pinBody.position.x;
+
+        const distanceY =
+          ball.position.y - pinBody.position.y;
+
+        const distance = Math.sqrt(
+          distanceX * distanceX +
+          distanceY * distanceY
+        );
+
+        if (
+          nearestUpgradePin === null ||
+          distance < nearestUpgradePin.distance
+        ) {
+          nearestUpgradePin = {
+            id: pinId,
+            body: pinBody,
+            type: pinType,
+            distance,
+          };
+        }
+      }
+
+      if (
+        nearestUpgradePin === null ||
+        nearestUpgradePin.distance >
+          UPGRADE_PIN_SLOW_DISTANCE
+      ) {
+        if (isSlowMotionRef.current) {
+          engine.timing.timeScale =
+            NORMAL_TIME_SCALE;
+
+          isSlowMotionRef.current = false;
+        }
+
+        if (spotlightPinIdRef.current !== null) {
+          spotlightPinIdRef.current = null;
+
+          setIsSpotlightActive(false);
+          setSpotlightPin(null);
+        }
+
+        return;
+      }
+
+      if (!isSlowMotionRef.current) {
+        engine.timing.timeScale =
+          SLOW_TIME_SCALE;
+
+        isSlowMotionRef.current = true;
+      }
+
+      if (
+        spotlightPinIdRef.current !==
+        nearestUpgradePin.id
+      ) {
+        spotlightPinIdRef.current =
+          nearestUpgradePin.id;
+
+        setSpotlightPin({
+          id: nearestUpgradePin.id,
+          x: nearestUpgradePin.body.position.x,
+          y: nearestUpgradePin.body.position.y,
+          type: nearestUpgradePin.type,
+        });
+      }
+
+      setIsSpotlightActive(true);
+    };
+
     const update = () => {
       const now = Date.now();
       const delta = Math.min(now - lastTime, 33);
       lastTime = now;
+
+      updateSlowMotion();
 
       Matter.Engine.update(engine, delta);
 
@@ -497,6 +655,83 @@ export default function HomeScreen() {
         )}
 
         <View style={styles.resultLine} />
+
+        {isSpotlightActive &&
+          spotlightPin &&
+          !showResult && (
+            <View
+              pointerEvents="none"
+              style={styles.spotlightLayer}
+            >
+              <View style={styles.darkOverlay} />
+
+              <View
+                style={[
+                  styles.ballSpotlightGlow,
+                  {
+                    left:
+                      ballPosition.x -
+                      BALL_RADIUS * 2.5,
+                    top:
+                      ballPosition.y -
+                      BALL_RADIUS * 2.5,
+                  },
+                ]}
+              />
+
+              <View
+                style={[
+                  styles.spotlightBall,
+                  {
+                    left:
+                      ballPosition.x -
+                      BALL_RADIUS,
+                    top:
+                      ballPosition.y -
+                      BALL_RADIUS,
+                    backgroundColor:
+                      getBallColor(),
+                  },
+                ]}
+              />
+
+              <View
+                style={[
+                  styles.pinSpotlightGlow,
+                  spotlightPin.type ===
+                  'rainbow'
+                    ? styles.rainbowSpotlightGlow
+                    : styles.goldSpotlightGlow,
+                  {
+                    left:
+                      spotlightPin.x -
+                      PIN_RADIUS * 2.5,
+                    top:
+                      spotlightPin.y -
+                      PIN_RADIUS * 2.5,
+                  },
+                ]}
+              />
+
+              <View
+                style={[
+                  styles.spotlightPin,
+                  spotlightPin.type ===
+                  'rainbow'
+                    ? styles.rainbowSpotlightPin
+                    : styles.goldSpotlightPin,
+                  {
+                    left:
+                      spotlightPin.x -
+                      PIN_RADIUS,
+                    top:
+                      spotlightPin.y -
+                      PIN_RADIUS,
+                  },
+                ]}
+              />
+            </View>
+        )}
 
         {showResult && (
           <View style={styles.resultOverlay}>
@@ -655,5 +890,97 @@ const styles = StyleSheet.create({
       height: 0,
     },
     elevation: 12,
+  },
+  spotlightLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 50,
+  },
+
+  darkOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  },
+
+  ballSpotlightGlow: {
+    position: 'absolute',
+    width: BALL_RADIUS * 5,
+    height: BALL_RADIUS * 5,
+    borderRadius: BALL_RADIUS * 2.5,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    shadowColor: '#ffffff',
+    shadowOpacity: 1,
+    shadowRadius: 24,
+    shadowOffset: {
+      width: 0,
+      height: 0,
+    },
+    elevation: 20,
+  },
+
+  spotlightBall: {
+    position: 'absolute',
+    width: BALL_RADIUS * 2,
+    height: BALL_RADIUS * 2,
+    borderRadius: BALL_RADIUS,
+    borderWidth: 2,
+    borderColor: '#ffffff',
+    shadowColor: '#ffffff',
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    shadowOffset: {
+      width: 0,
+      height: 0,
+    },
+    elevation: 25,
+  },
+
+  pinSpotlightGlow: {
+    position: 'absolute',
+    width: PIN_RADIUS * 5,
+    height: PIN_RADIUS * 5,
+    borderRadius: PIN_RADIUS * 2.5,
+    shadowOpacity: 1,
+    shadowRadius: 25,
+    shadowOffset: {
+      width: 0,
+      height: 0,
+    },
+    elevation: 20,
+  },
+
+  goldSpotlightGlow: {
+    backgroundColor: 'rgba(250, 204, 21, 0.22)',
+    shadowColor: '#facc15',
+  },
+
+  rainbowSpotlightGlow: {
+    backgroundColor: 'rgba(244, 114, 182, 0.25)',
+    shadowColor: '#f472b6',
+  },
+
+  spotlightPin: {
+    position: 'absolute',
+    width: PIN_RADIUS * 2,
+    height: PIN_RADIUS * 2,
+    borderRadius: PIN_RADIUS,
+    borderWidth: 2,
+    borderColor: '#ffffff',
+    shadowOpacity: 1,
+    shadowRadius: 14,
+    shadowOffset: {
+      width: 0,
+      height: 0,
+    },
+    elevation: 25,
+  },
+
+  goldSpotlightPin: {
+    backgroundColor: '#facc15',
+    shadowColor: '#facc15',
+  },
+
+  rainbowSpotlightPin: {
+    backgroundColor: '#f472b6',
+    shadowColor: '#f472b6',
   },
 });
