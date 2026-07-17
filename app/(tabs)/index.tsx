@@ -671,10 +671,10 @@ export default function HomeScreen() {
                   {
                     left:
                       ballPosition.x -
-                      BALL_RADIUS * 2.5,
+                      BALL_RADIUS * 1.6,
                     top:
                       ballPosition.y -
-                      BALL_RADIUS * 2.5,
+                      BALL_RADIUS * 1.6,
                   },
                 ]}
               />
@@ -705,10 +705,64 @@ export default function HomeScreen() {
                   {
                     left:
                       spotlightPin.x -
-                      PIN_RADIUS * 2.5,
+                      PIN_RADIUS * 4,
                     top:
                       spotlightPin.y -
-                      PIN_RADIUS * 2.5,
+                      PIN_RADIUS * 4,
+                  },
+                ]}
+              />
+
+              <View
+                style={[
+                  styles.lightBeam,
+                  styles.lightBeamVertical,
+                  {
+                    left: spotlightPin.x - 4,
+                    top: spotlightPin.y - 110,
+                  },
+                ]}
+              />
+
+              <View
+                style={[
+                  styles.lightBeam,
+                  styles.lightBeamHorizontal,
+                  {
+                    left: spotlightPin.x - 110,
+                    top: spotlightPin.y - 4,
+                  },
+                ]}
+              />
+
+              <View
+                style={[
+                  styles.lightBeam,
+                  styles.lightBeamDiagonal,
+                  {
+                    left: spotlightPin.x - 3.5,
+                    top: spotlightPin.y - 85,
+                    transform: [
+                      {
+                        rotate: '45deg',
+                      },
+                    ],
+                  },
+                ]}
+              />
+
+              <View
+                style={[
+                  styles.lightBeam,
+                  styles.lightBeamDiagonal,
+                  {
+                    left: spotlightPin.x - 3.5,
+                    top: spotlightPin.y - 85,
+                    transform: [
+                      {
+                        rotate: '-45deg',
+                      },
+                    ],
                   },
                 ]}
               />
@@ -903,13 +957,13 @@ const styles = StyleSheet.create({
 
   ballSpotlightGlow: {
     position: 'absolute',
-    width: BALL_RADIUS * 5,
-    height: BALL_RADIUS * 5,
-    borderRadius: BALL_RADIUS * 2.5,
-    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    width: BALL_RADIUS * 3.2,
+    height: BALL_RADIUS * 3.2,
+    borderRadius: BALL_RADIUS * 1.6,
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
     shadowColor: '#ffffff',
-    shadowOpacity: 1,
-    shadowRadius: 24,
+    shadowOpacity: 0.9,
+    shadowRadius: 14,
     shadowOffset: {
       width: 0,
       height: 0,
@@ -936,26 +990,26 @@ const styles = StyleSheet.create({
 
   pinSpotlightGlow: {
     position: 'absolute',
-    width: PIN_RADIUS * 5,
-    height: PIN_RADIUS * 5,
-    borderRadius: PIN_RADIUS * 2.5,
+    width: PIN_RADIUS * 8,
+    height: PIN_RADIUS * 8,
+    borderRadius: PIN_RADIUS * 4,
     shadowOpacity: 1,
-    shadowRadius: 25,
+    shadowRadius: 40,
     shadowOffset: {
       width: 0,
       height: 0,
     },
-    elevation: 20,
+    elevation: 30,
   },
 
   goldSpotlightGlow: {
-    backgroundColor: 'rgba(250, 204, 21, 0.22)',
-    shadowColor: '#facc15',
+    backgroundColor: 'rgba(255, 255, 180, 0.18)',
+    shadowColor: '#ffe600',
   },
 
   rainbowSpotlightGlow: {
-    backgroundColor: 'rgba(244, 114, 182, 0.25)',
-    shadowColor: '#f472b6',
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    shadowColor: '#ff4fd8',
   },
 
   spotlightPin: {
@@ -982,5 +1036,36 @@ const styles = StyleSheet.create({
   rainbowSpotlightPin: {
     backgroundColor: '#f472b6',
     shadowColor: '#f472b6',
+  },
+  lightBeam: {
+    position: 'absolute',
+    backgroundColor: '#ffe600',
+    shadowColor: '#ffe600',
+    shadowOpacity: 1,
+    shadowRadius: 18,
+    shadowOffset: {
+      width: 0,
+      height: 0,
+    },
+    elevation: 40,
+    opacity: 0.9,
+  },
+
+  lightBeamVertical: {
+    width: 8,
+    height: 220,
+    borderRadius: 8,
+  },
+
+  lightBeamHorizontal: {
+    width: 220,
+    height: 8,
+    borderRadius: 8,
+  },
+
+  lightBeamDiagonal: {
+    width: 7,
+    height: 170,
+    borderRadius: 8,
   },
 });
