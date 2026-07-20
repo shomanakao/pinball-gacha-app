@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Matter from 'matter-js';
 
 const { width, height } = Dimensions.get('window');
@@ -681,6 +682,27 @@ export default function HomeScreen() {
     outputRange: ['0deg', '12deg'],
   });
 
+  const spotlightBeamConfigs =
+    spotlightPin?.type === 'rainbow'
+      ? [
+          { angle: 0, length: 190 },
+          { angle: 22.5, length: 155 },
+          { angle: 45, length: 175 },
+          { angle: 67.5, length: 150 },
+          { angle: 90, length: 185 },
+          { angle: 112.5, length: 160 },
+          { angle: 135, length: 170 },
+          { angle: 157.5, length: 150 },
+        ]
+      : [
+          { angle: 0, length: 180 },
+          { angle: 30, length: 145 },
+          { angle: 60, length: 160 },
+          { angle: 90, length: 175 },
+          { angle: 120, length: 150 },
+          { angle: 150, length: 165 },
+        ];
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Pinball Gacha</Text>
@@ -766,6 +788,95 @@ export default function HomeScreen() {
                 ]}
               />
 
+              {/* ピンの大きなぼかし */}
+              <Animated.View
+                style={{
+                  position: 'absolute',
+                  left: spotlightPin.x - 55,
+                  top: spotlightPin.y - 55,
+                  width: 110,
+                  height: 110,
+                  borderRadius: 55,
+                  backgroundColor:
+                    spotlightPin.type === 'rainbow'
+                      ? 'rgba(255,255,255,0.16)'
+                      : 'rgba(255,245,180,0.12)',
+                  opacity: lightBeamOpacity,
+                }}
+              />
+
+              {/* ピンの中心発光 */}
+              <Animated.View
+                style={{
+                  position: 'absolute',
+                  left: spotlightPin.x - 24,
+                  top: spotlightPin.y - 24,
+                  width: 48,
+                  height: 48,
+                  borderRadius: 24,
+                  overflow: 'hidden',
+                  opacity: lightBeamOpacity,
+                }}
+              >
+                {spotlightPin.type === 'rainbow' ? (
+                  <LinearGradient
+                    colors={[
+                      'rgba(255,255,255,0)',
+                      'rgba(120,255,255,0.28)',
+                      'rgba(255,255,255,0.82)',
+                      'rgba(255,140,255,0.30)',
+                      'rgba(255,255,255,0)',
+                    ]}
+                    locations={[0, 0.28, 0.5, 0.72, 1]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      borderRadius: 24,
+                    }}
+                  />
+                ) : (
+                  <LinearGradient
+                    colors={[
+                      'rgba(255,255,255,0)',
+                      'rgba(255,245,180,0.30)',
+                      'rgba(255,255,255,0.88)',
+                      'rgba(255,230,120,0.30)',
+                      'rgba(255,255,255,0)',
+                    ]}
+                    locations={[0, 0.28, 0.5, 0.72, 1]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      borderRadius: 24,
+                    }}
+                  />
+                )}
+              </Animated.View>
+
+              {/* ピンの白いコア */}
+              <Animated.View
+                style={{
+                  position: 'absolute',
+                  left: spotlightPin.x - 8,
+                  top: spotlightPin.y - 8,
+                  width: 16,
+                  height: 16,
+                  borderRadius: 8,
+                  backgroundColor: '#FFFFFF',
+                  shadowColor: '#FFFFFF',
+                  shadowOpacity: 1,
+                  shadowRadius: 12,
+                  opacity: Animated.multiply(
+                    lightBeamOpacity,
+                    0.95
+                  ),
+                }}
+              />
+
               <View
                 style={[
                   styles.pinSpotlightGlow,
@@ -786,12 +897,99 @@ export default function HomeScreen() {
 
               <Animated.View
                 style={[
-                  styles.lightBeam,
+                  styles.lightBeamGlow,
                   styles.lightBeamVertical,
+                  spotlightPin.type === 'rainbow'
+                    ? styles.rainbowSpotlightGlow
+                    : styles.goldSpotlightGlow,
                   {
-                    left: spotlightPin.x - 4,
+                    left: spotlightPin.x - 7,
                     top: spotlightPin.y - 110,
-                    opacity: lightBeamOpacity,
+                    opacity: Animated.multiply(
+                      lightBeamOpacity,
+                      0.45
+                    ),
+                    transform: [
+                      {
+                        scaleY: lightBeamScale,
+                      },
+                    ],
+                  },
+                ]}
+              />
+
+              <Animated.View
+                style={{
+                  position: 'absolute',
+                  left: spotlightPin.x - 2,
+                  top: spotlightPin.y - 85,
+                  opacity: lightBeamOpacity,
+                  transform: [
+                    {
+                      scaleY: lightBeamScale,
+                    },
+                  ],
+                }}
+              >
+                <LinearGradient
+                  colors={[
+                    'rgba(255,0,120,0)',
+                    'rgba(0,255,255,0.55)',
+                    'rgba(255,255,120,0.9)',
+                    'rgba(255,120,255,0.55)',
+                    'rgba(255,0,120,0)',
+                  ]}
+
+                  locations={[
+                    0,
+                    0.2,
+                    0.5,
+                    0.8,
+                    1,
+                  ]}
+                  style={{
+                    width: 6,
+                    height: 170,
+                    borderRadius: 2,
+                  }}
+                />
+              </Animated.View>
+
+              <Animated.View
+                style={{
+                  position: 'absolute',
+                  left: spotlightPin.x - 1,
+                  top: spotlightPin.y - 67.5,
+                  width: 2,
+                  height: 135,
+                  borderRadius: 1,
+                  backgroundColor: '#FFFFFF',
+                  opacity: Animated.multiply(lightBeamOpacity, 0.9),
+                  transform: [
+                    {
+                      rotate: '45deg',
+                    },
+                    {
+                      scaleY: lightBeamScale,
+                    },
+                  ],
+                }}
+              />
+
+              <Animated.View
+                style={[
+                  styles.lightBeamGlow,
+                  styles.lightBeamHorizontal,
+                  spotlightPin.type === 'rainbow'
+                    ? styles.rainbowSpotlightGlow
+                    : styles.goldSpotlightGlow,
+                  {
+                    left: spotlightPin.x - 7,
+                    top: spotlightPin.y - 110,
+                    opacity: Animated.multiply(
+                      lightBeamOpacity,
+                      0.45
+                    ),
                     transform: [
                       {
                         scaleY: lightBeamScale,
@@ -804,7 +1002,7 @@ export default function HomeScreen() {
               <Animated.View
                 style={[
                   styles.lightBeam,
-                  styles.lightBeamHorizontal,
+                  styles.lightBeamHorizontalCore,
                   {
                     left: spotlightPin.x - 110,
                     top: spotlightPin.y - 4,
@@ -818,13 +1016,38 @@ export default function HomeScreen() {
                 ]}
               />
 
+              {/* 右上から左下へ伸びる太い光 */}
+              <Animated.View
+                style={[
+                  styles.lightBeamGlow,
+                  styles.lightBeamDiagonal,
+                  spotlightPin.type === 'rainbow'
+                    ? styles.rainbowSpotlightGlow
+                    : styles.goldSpotlightGlow,
+                  {
+                    left: spotlightPin.x - 7,
+                    top: spotlightPin.y - 110,
+                    opacity: Animated.multiply(lightBeamOpacity, 0.45),
+                    transform: [
+                      {
+                        rotate: '45deg',
+                      },
+                      {
+                        scaleY: lightBeamScale,
+                      },
+                    ],
+                  },
+                ]}
+              />
+
+              {/* 右上から左下へ伸びる細い芯 */}
               <Animated.View
                 style={[
                   styles.lightBeam,
-                  styles.lightBeamDiagonal,
+                  styles.lightBeamDiagonalCore,
                   {
-                    left: spotlightPin.x - 3.5,
-                    top: spotlightPin.y - 85,
+                    left: spotlightPin.x - 2,
+                    top: spotlightPin.y - 67.5,
                     opacity: lightBeamOpacity,
                     transform: [
                       {
@@ -838,14 +1061,18 @@ export default function HomeScreen() {
                 ]}
               />
 
+              {/* 左上から右下へ伸びる太い光 */}
               <Animated.View
                 style={[
-                  styles.lightBeam,
+                  styles.lightBeamGlow,
                   styles.lightBeamDiagonal,
+                  spotlightPin.type === 'rainbow'
+                    ? styles.rainbowSpotlightGlow
+                    : styles.goldSpotlightGlow,
                   {
-                    left: spotlightPin.x - 3.5,
-                    top: spotlightPin.y - 85,
-                    opacity: lightBeamOpacity,
+                    left: spotlightPin.x - 7,
+                    top: spotlightPin.y - 110,
+                    opacity: Animated.multiply(lightBeamOpacity, 0.45),
                     transform: [
                       {
                         rotate: '-45deg',
@@ -857,6 +1084,166 @@ export default function HomeScreen() {
                   },
                 ]}
               />
+
+              {/* 中心から放射する光線 */}
+              {spotlightBeamConfigs.map(
+                (beam, index) => {
+                  const isRainbow =
+                    spotlightPin.type === 'rainbow';
+
+                  const outerWidth = isRainbow ? 15 : 13;
+                  const middleWidth = isRainbow ? 7 : 6;
+                  const coreWidth = isRainbow ? 2 : 1.5;
+
+                  return (
+                    <Animated.View
+                      key={`${spotlightPin.type}-${beam.angle}-${index}`}
+                      style={{
+                        position: 'absolute',
+
+                        // View全体の中心をピンの中心に合わせる
+                        left:
+                          spotlightPin.x -
+                          outerWidth / 2,
+                        top:
+                          spotlightPin.y -
+                          beam.length / 2,
+
+                        width: outerWidth,
+                        height: beam.length,
+
+                        opacity: lightBeamOpacity,
+
+                        transform: [
+                          {
+                            rotate: `${beam.angle}deg`,
+                          },
+                          {
+                            scaleY: lightBeamScale,
+                          },
+                        ],
+
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {/* 外側の柔らかい発光 */}
+                      <LinearGradient
+                        colors={
+                          isRainbow
+                            ? [
+                                'rgba(255,255,255,0)',
+                                'rgba(150,220,255,0.08)',
+                                'rgba(255,180,255,0.18)',
+                                'rgba(255,255,255,0.28)',
+                                'rgba(160,255,255,0.18)',
+                                'rgba(255,255,255,0)',
+                              ]
+                            : [
+                                'rgba(255,245,180,0)',
+                                'rgba(255,235,130,0.08)',
+                                'rgba(255,245,190,0.18)',
+                                'rgba(255,255,245,0.28)',
+                                'rgba(255,225,100,0.16)',
+                                'rgba(255,245,180,0)',
+                              ]
+                        }
+                        locations={[
+                          0,
+                          0.18,
+                          0.36,
+                          0.5,
+                          0.68,
+                          1,
+                        ]}
+                        start={{ x: 0.5, y: 0 }}
+                        end={{ x: 0.5, y: 1 }}
+                        style={{
+                          position: 'absolute',
+                          width: outerWidth,
+                          height: beam.length,
+                          borderRadius:
+                            outerWidth / 2,
+                        }}
+                      />
+
+                      {/* 色の付いた中間光 */}
+                      <LinearGradient
+                        colors={
+                          isRainbow
+                            ? [
+                                'rgba(255,100,210,0)',
+                                'rgba(100,220,255,0.22)',
+                                'rgba(255,245,150,0.55)',
+                                'rgba(255,255,255,0.82)',
+                                'rgba(255,150,240,0.55)',
+                                'rgba(100,230,255,0.22)',
+                                'rgba(255,100,210,0)',
+                              ]
+                            : [
+                                'rgba(255,215,80,0)',
+                                'rgba(255,225,110,0.20)',
+                                'rgba(255,245,185,0.52)',
+                                'rgba(255,255,255,0.86)',
+                                'rgba(255,240,160,0.52)',
+                                'rgba(255,220,90,0.20)',
+                                'rgba(255,215,80,0)',
+                              ]
+                        }
+                        locations={[
+                          0,
+                          0.16,
+                          0.34,
+                          0.5,
+                          0.66,
+                          0.84,
+                          1,
+                        ]}
+                        start={{ x: 0.5, y: 0 }}
+                        end={{ x: 0.5, y: 1 }}
+                        style={{
+                          position: 'absolute',
+                          width: middleWidth,
+                          height: beam.length * 0.88,
+                          borderRadius:
+                            middleWidth / 2,
+                        }}
+                      />
+
+                      {/* 真ん中の白い芯 */}
+                      <LinearGradient
+                        colors={[
+                          'rgba(255,255,255,0)',
+                          'rgba(255,255,255,0.25)',
+                          'rgba(255,255,255,0.92)',
+                          'rgba(255,255,255,1)',
+                          'rgba(255,255,255,0.92)',
+                          'rgba(255,255,255,0.25)',
+                          'rgba(255,255,255,0)',
+                        ]}
+                        locations={[
+                          0,
+                          0.2,
+                          0.4,
+                          0.5,
+                          0.6,
+                          0.8,
+                          1,
+                        ]}
+                        start={{ x: 0.5, y: 0 }}
+                        end={{ x: 0.5, y: 1 }}
+                        style={{
+                          position: 'absolute',
+                          width: coreWidth,
+                          height: beam.length * 0.72,
+                          borderRadius:
+                            coreWidth / 2,
+                        }}
+                      />
+                    </Animated.View>
+                  );
+                }
+              )}
 
               <Animated.View
                 pointerEvents="none"
@@ -1270,9 +1657,33 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
 
+  lightBeamGlow: {
+    position: 'absolute',
+    opacity: 0.45,
+    elevation: 15,
+  },
+
   lightBeamVertical: {
-    width: 8,
+    width: 6,
     height: 220,
+    borderRadius: 8,
+  },
+
+  lightBeamVerticalCore: {
+    width: 4,
+    height: 170,
+    borderRadius: 8,
+  },
+
+  lightBeamHorizontalCore: {
+    width: 170,
+    height: 4,
+    borderRadius: 8,
+  },
+
+  lightBeamDiagonalCore: {
+    width: 4,
+    height: 135,
     borderRadius: 8,
   },
 
