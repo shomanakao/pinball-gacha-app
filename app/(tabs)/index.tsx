@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  Animated,
   Dimensions,
   Pressable,
   StyleSheet,
@@ -182,6 +183,8 @@ export default function HomeScreen() {
 
   const rarityRef = useRef<Rarity>('white');
 
+  const lightBeamAnimation = useRef(new Animated.Value(0)).current;
+
   const [hitPinIds, setHitPinIds] = useState<string[]>([]);
 
   const [isSpotlightActive, setIsSpotlightActive] =
@@ -214,6 +217,39 @@ export default function HomeScreen() {
       stopEngine();
     };
   }, []);
+
+  useEffect(() => {
+    if (!isSpotlightActive || !spotlightPin) {
+      lightBeamAnimation.stopAnimation();
+      lightBeamAnimation.setValue(0);
+      return;
+    }
+
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(lightBeamAnimation, {
+          toValue: 1,
+          duration: 450,
+          useNativeDriver: true,
+        }),
+        Animated.timing(lightBeamAnimation, {
+          toValue: 0,
+          duration: 450,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    animation.start();
+
+    return () => {
+      animation.stop();
+    };
+  }, [
+    isSpotlightActive,
+    spotlightPin,
+    lightBeamAnimation,
+  ]);
 
   const stopEngine = () => {
     if (animationFrameRef.current !== null) {
@@ -610,6 +646,41 @@ export default function HomeScreen() {
       requestAnimationFrame(update);
   };
 
+  const lightBeamOpacity = lightBeamAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.4, 0.95],
+  });
+
+  const lightBeamScale = lightBeamAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.88, 1.08],
+  });
+
+  const pinCoreScale = lightBeamAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.9, 1.15],
+  });
+
+  const pinCoreOpacity = lightBeamAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.75, 1],
+  });
+
+  const particleOpacity = lightBeamAnimation.interpolate({
+    inputRange: [0, 0.4, 1],
+    outputRange: [1, 0.7, 0.15],
+  });
+
+  const particleDistance = lightBeamAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [18, 42],
+  });
+
+  const particleRotation = lightBeamAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '12deg'],
+  });
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Pinball Gacha</Text>
@@ -713,54 +784,150 @@ export default function HomeScreen() {
                 ]}
               />
 
-              <View
+              <Animated.View
                 style={[
                   styles.lightBeam,
                   styles.lightBeamVertical,
                   {
                     left: spotlightPin.x - 4,
                     top: spotlightPin.y - 110,
-                  },
-                ]}
-              />
-
-              <View
-                style={[
-                  styles.lightBeam,
-                  styles.lightBeamHorizontal,
-                  {
-                    left: spotlightPin.x - 110,
-                    top: spotlightPin.y - 4,
-                  },
-                ]}
-              />
-
-              <View
-                style={[
-                  styles.lightBeam,
-                  styles.lightBeamDiagonal,
-                  {
-                    left: spotlightPin.x - 3.5,
-                    top: spotlightPin.y - 85,
+                    opacity: lightBeamOpacity,
                     transform: [
                       {
-                        rotate: '45deg',
+                        scaleY: lightBeamScale,
                       },
                     ],
                   },
                 ]}
               />
 
-              <View
+              <Animated.View
+                style={[
+                  styles.lightBeam,
+                  styles.lightBeamHorizontal,
+                  {
+                    left: spotlightPin.x - 110,
+                    top: spotlightPin.y - 4,
+                    opacity: lightBeamOpacity,
+                    transform: [
+                      {
+                        scaleX: lightBeamScale,
+                      },
+                    ],
+                  },
+                ]}
+              />
+
+              <Animated.View
                 style={[
                   styles.lightBeam,
                   styles.lightBeamDiagonal,
                   {
                     left: spotlightPin.x - 3.5,
                     top: spotlightPin.y - 85,
+                    opacity: lightBeamOpacity,
+                    transform: [
+                      {
+                        rotate: '45deg',
+                      },
+                      {
+                        scaleY: lightBeamScale,
+                      },
+                    ],
+                  },
+                ]}
+              />
+
+              <Animated.View
+                style={[
+                  styles.lightBeam,
+                  styles.lightBeamDiagonal,
+                  {
+                    left: spotlightPin.x - 3.5,
+                    top: spotlightPin.y - 85,
+                    opacity: lightBeamOpacity,
                     transform: [
                       {
                         rotate: '-45deg',
+                      },
+                      {
+                        scaleY: lightBeamScale,
+                      },
+                    ],
+                  },
+                ]}
+              />
+
+              <Animated.View
+                pointerEvents="none"
+                style={[
+                  styles.particleGroup,
+                  {
+                    left: spotlightPin.x,
+                    top: spotlightPin.y,
+                    transform: [
+                      {
+                        rotate: particleRotation,
+                      },
+                    ],
+                  },
+                ]}
+              >
+                {[
+                  { x: -1, y: 0 },
+                  { x: 1, y: 0 },
+                  { x: 0, y: -1 },
+                  { x: 0, y: 1 },
+                ].map((particle, index) => (
+                  <Animated.View
+                    key={index}
+                    style={[
+                      styles.lightParticle,
+                      spotlightPin.type === 'rainbow'
+                        ? styles.rainbowParticle
+                        : styles.goldParticle,
+                      {
+                        opacity: particleOpacity,
+                        transform: [
+                          {
+                            translateX:
+                              particle.x === 0
+                                ? 0
+                                : particle.x > 0
+                                  ? particleDistance
+                                  : Animated.multiply(particleDistance, -1),
+                          },
+                          {
+                            translateY:
+                              particle.y === 0
+                                ? 0
+                                : particle.y > 0
+                                  ? particleDistance
+                                  : Animated.multiply(particleDistance, -1),
+                          },
+                          {
+                            scale: pinCoreScale,
+                          },
+                        ],
+                      },
+                    ]}
+                  />
+                ))}
+              </Animated.View>
+
+              <Animated.View
+                style={[
+                  styles.pinCoreGlow,
+                  spotlightPin.type === 'rainbow'
+                    ? styles.rainbowCoreGlow
+                    : styles.goldCoreGlow,
+                  {
+                    left: spotlightPin.x - 14,
+                    top: spotlightPin.y - 14,
+                    opacity: particleOpacity,
+                    transform: [
+                      {
+                        scale: pinCoreScale,
                       },
                     ],
                   },
@@ -1033,6 +1200,58 @@ const styles = StyleSheet.create({
     shadowColor: '#facc15',
   },
 
+  pinCoreGlow: {
+    position: 'absolute',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.9)',
+    shadowOpacity: 1,
+    shadowRadius: 18,
+    shadowOffset: {
+      width: 0,
+      height: 0,
+    },
+    elevation: 50,
+  },
+
+  goldCoreGlow: {
+    backgroundColor: 'rgba(255,255,230,0.95)',
+    shadowColor: '#fff59d',
+  },
+
+  rainbowCoreGlow: {
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    shadowColor: '#ff6ad5',
+  },
+
+  lightParticle: {
+    position: 'absolute',
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    shadowOpacity: 1,
+    shadowRadius: 18,
+    left: -2,
+    top: -2,
+    shadowOffset: {
+      width: 0,
+      height: 0,
+    },
+    elevation: 60,
+  },
+
+  goldParticle: {
+    backgroundColor: '#fff7b3',
+    shadowColor: '#ffe600',
+  },
+
+  rainbowParticle: {
+    backgroundColor: '#ffffff',
+    shadowColor: '#ff6ad5',
+  },
+
   rainbowSpotlightPin: {
     backgroundColor: '#f472b6',
     shadowColor: '#f472b6',
@@ -1067,5 +1286,13 @@ const styles = StyleSheet.create({
     width: 7,
     height: 170,
     borderRadius: 8,
+  },
+
+  particleGroup: {
+    position: 'absolute',
+    width: 0,
+    height: 0,
+    overflow: 'visible',
+    zIndex: 60,
   },
 });
