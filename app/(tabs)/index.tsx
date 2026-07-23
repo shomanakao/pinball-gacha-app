@@ -7,6 +7,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import Svg, { Polygon } from 'react-native-svg';
 
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Matter from 'matter-js';
@@ -159,6 +160,97 @@ const createRandomStartX = () => {
 };
 
 const FIRST_PINS = createRandomPins();
+
+type BeamProps = {
+  centerX: number;
+  centerY: number;
+  angle: number;
+  length: number;
+  rainbow: boolean;
+  opacity: Animated.AnimatedInterpolation<number>;
+  scale: Animated.AnimatedInterpolation<number>;
+};
+
+function Beam({
+  centerX,
+  centerY,
+  angle,
+  length,
+  rainbow,
+  opacity,
+  scale,
+}: BeamProps) {
+  const width = rainbow ? 22 : 18;
+
+  return (
+    <Animated.View
+      style={{
+        position: 'absolute',
+        width,
+        height: length,
+        left: centerX - width / 2,
+        top: centerY - length / 2,
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity,
+        transform: [
+          {
+            rotate: `${angle}deg`,
+          },
+          {
+            scaleY: scale,
+          },
+        ],
+      }}
+    >
+      <Svg
+        width={width}
+        height={length}
+      >
+        {/* 外側 */}
+        <Polygon
+          points={`
+            ${width / 2},0
+            ${width},${length / 2}
+            ${width / 2},${length}
+            0,${length / 2}
+          `}
+          fill={
+            rainbow
+              ? 'rgba(255,255,255,0.18)'
+              : 'rgba(255,235,120,0.22)'
+          }
+        />
+
+        {/* 中間 */}
+        <Polygon
+          points={`
+            ${width / 2},${length * 0.1}
+            ${width * 0.82},${length / 2}
+            ${width / 2},${length * 0.9}
+            ${width * 0.18},${length / 2}
+          `}
+          fill={
+            rainbow
+              ? 'rgba(170,240,255,0.55)'
+              : 'rgba(255,250,200,0.58)'
+          }
+        />
+
+        {/* 白い芯 */}
+        <Polygon
+          points={`
+            ${width / 2},${length * 0.22}
+            ${width * 0.62},${length / 2}
+            ${width / 2},${length * 0.78}
+            ${width * 0.38},${length / 2}
+          `}
+          fill="white"
+        />
+      </Svg>
+    </Animated.View>
+  );
+}
 
 export default function HomeScreen() {
   const engineRef = useRef<Matter.Engine | null>(null);
@@ -895,355 +987,19 @@ export default function HomeScreen() {
                 ]}
               />
 
-              <Animated.View
-                style={[
-                  styles.lightBeamGlow,
-                  styles.lightBeamVertical,
-                  spotlightPin.type === 'rainbow'
-                    ? styles.rainbowSpotlightGlow
-                    : styles.goldSpotlightGlow,
-                  {
-                    left: spotlightPin.x - 7,
-                    top: spotlightPin.y - 110,
-                    opacity: Animated.multiply(
-                      lightBeamOpacity,
-                      0.45
-                    ),
-                    transform: [
-                      {
-                        scaleY: lightBeamScale,
-                      },
-                    ],
-                  },
-                ]}
-              />
-
-              <Animated.View
-                style={{
-                  position: 'absolute',
-                  left: spotlightPin.x - 2,
-                  top: spotlightPin.y - 85,
-                  opacity: lightBeamOpacity,
-                  transform: [
-                    {
-                      scaleY: lightBeamScale,
-                    },
-                  ],
-                }}
-              >
-                <LinearGradient
-                  colors={[
-                    'rgba(255,0,120,0)',
-                    'rgba(0,255,255,0.55)',
-                    'rgba(255,255,120,0.9)',
-                    'rgba(255,120,255,0.55)',
-                    'rgba(255,0,120,0)',
-                  ]}
-
-                  locations={[
-                    0,
-                    0.2,
-                    0.5,
-                    0.8,
-                    1,
-                  ]}
-                  style={{
-                    width: 6,
-                    height: 170,
-                    borderRadius: 2,
-                  }}
+              {/* 中心から放射するSVG光線 */}
+              {spotlightBeamConfigs.map((beam, index) => (
+                <Beam
+                  key={`${beam.angle}-${index}`}
+                  centerX={spotlightPin.x}
+                  centerY={spotlightPin.y}
+                  angle={beam.angle}
+                  length={beam.length}
+                  rainbow={spotlightPin.type === 'rainbow'}
+                  opacity={lightBeamOpacity}
+                  scale={lightBeamScale}
                 />
-              </Animated.View>
-
-              <Animated.View
-                style={{
-                  position: 'absolute',
-                  left: spotlightPin.x - 1,
-                  top: spotlightPin.y - 67.5,
-                  width: 2,
-                  height: 135,
-                  borderRadius: 1,
-                  backgroundColor: '#FFFFFF',
-                  opacity: Animated.multiply(lightBeamOpacity, 0.9),
-                  transform: [
-                    {
-                      rotate: '45deg',
-                    },
-                    {
-                      scaleY: lightBeamScale,
-                    },
-                  ],
-                }}
-              />
-
-              <Animated.View
-                style={[
-                  styles.lightBeamGlow,
-                  styles.lightBeamHorizontal,
-                  spotlightPin.type === 'rainbow'
-                    ? styles.rainbowSpotlightGlow
-                    : styles.goldSpotlightGlow,
-                  {
-                    left: spotlightPin.x - 7,
-                    top: spotlightPin.y - 110,
-                    opacity: Animated.multiply(
-                      lightBeamOpacity,
-                      0.45
-                    ),
-                    transform: [
-                      {
-                        scaleY: lightBeamScale,
-                      },
-                    ],
-                  },
-                ]}
-              />
-
-              <Animated.View
-                style={[
-                  styles.lightBeam,
-                  styles.lightBeamHorizontalCore,
-                  {
-                    left: spotlightPin.x - 110,
-                    top: spotlightPin.y - 4,
-                    opacity: lightBeamOpacity,
-                    transform: [
-                      {
-                        scaleX: lightBeamScale,
-                      },
-                    ],
-                  },
-                ]}
-              />
-
-              {/* 右上から左下へ伸びる太い光 */}
-              <Animated.View
-                style={[
-                  styles.lightBeamGlow,
-                  styles.lightBeamDiagonal,
-                  spotlightPin.type === 'rainbow'
-                    ? styles.rainbowSpotlightGlow
-                    : styles.goldSpotlightGlow,
-                  {
-                    left: spotlightPin.x - 7,
-                    top: spotlightPin.y - 110,
-                    opacity: Animated.multiply(lightBeamOpacity, 0.45),
-                    transform: [
-                      {
-                        rotate: '45deg',
-                      },
-                      {
-                        scaleY: lightBeamScale,
-                      },
-                    ],
-                  },
-                ]}
-              />
-
-              {/* 右上から左下へ伸びる細い芯 */}
-              <Animated.View
-                style={[
-                  styles.lightBeam,
-                  styles.lightBeamDiagonalCore,
-                  {
-                    left: spotlightPin.x - 2,
-                    top: spotlightPin.y - 67.5,
-                    opacity: lightBeamOpacity,
-                    transform: [
-                      {
-                        rotate: '45deg',
-                      },
-                      {
-                        scaleY: lightBeamScale,
-                      },
-                    ],
-                  },
-                ]}
-              />
-
-              {/* 左上から右下へ伸びる太い光 */}
-              <Animated.View
-                style={[
-                  styles.lightBeamGlow,
-                  styles.lightBeamDiagonal,
-                  spotlightPin.type === 'rainbow'
-                    ? styles.rainbowSpotlightGlow
-                    : styles.goldSpotlightGlow,
-                  {
-                    left: spotlightPin.x - 7,
-                    top: spotlightPin.y - 110,
-                    opacity: Animated.multiply(lightBeamOpacity, 0.45),
-                    transform: [
-                      {
-                        rotate: '-45deg',
-                      },
-                      {
-                        scaleY: lightBeamScale,
-                      },
-                    ],
-                  },
-                ]}
-              />
-
-              {/* 中心から放射する光線 */}
-              {spotlightBeamConfigs.map(
-                (beam, index) => {
-                  const isRainbow =
-                    spotlightPin.type === 'rainbow';
-
-                  const outerWidth = isRainbow ? 15 : 13;
-                  const middleWidth = isRainbow ? 7 : 6;
-                  const coreWidth = isRainbow ? 2 : 1.5;
-
-                  return (
-                    <Animated.View
-                      key={`${spotlightPin.type}-${beam.angle}-${index}`}
-                      style={{
-                        position: 'absolute',
-
-                        // View全体の中心をピンの中心に合わせる
-                        left:
-                          spotlightPin.x -
-                          outerWidth / 2,
-                        top:
-                          spotlightPin.y -
-                          beam.length / 2,
-
-                        width: outerWidth,
-                        height: beam.length,
-
-                        opacity: lightBeamOpacity,
-
-                        transform: [
-                          {
-                            rotate: `${beam.angle}deg`,
-                          },
-                          {
-                            scaleY: lightBeamScale,
-                          },
-                        ],
-
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      {/* 外側の柔らかい発光 */}
-                      <LinearGradient
-                        colors={
-                          isRainbow
-                            ? [
-                                'rgba(255,255,255,0)',
-                                'rgba(150,220,255,0.08)',
-                                'rgba(255,180,255,0.18)',
-                                'rgba(255,255,255,0.28)',
-                                'rgba(160,255,255,0.18)',
-                                'rgba(255,255,255,0)',
-                              ]
-                            : [
-                                'rgba(255,245,180,0)',
-                                'rgba(255,235,130,0.08)',
-                                'rgba(255,245,190,0.18)',
-                                'rgba(255,255,245,0.28)',
-                                'rgba(255,225,100,0.16)',
-                                'rgba(255,245,180,0)',
-                              ]
-                        }
-                        locations={[
-                          0,
-                          0.18,
-                          0.36,
-                          0.5,
-                          0.68,
-                          1,
-                        ]}
-                        start={{ x: 0.5, y: 0 }}
-                        end={{ x: 0.5, y: 1 }}
-                        style={{
-                          position: 'absolute',
-                          width: outerWidth,
-                          height: beam.length,
-                          borderRadius:
-                            outerWidth / 2,
-                        }}
-                      />
-
-                      {/* 色の付いた中間光 */}
-                      <LinearGradient
-                        colors={
-                          isRainbow
-                            ? [
-                                'rgba(255,100,210,0)',
-                                'rgba(100,220,255,0.22)',
-                                'rgba(255,245,150,0.55)',
-                                'rgba(255,255,255,0.82)',
-                                'rgba(255,150,240,0.55)',
-                                'rgba(100,230,255,0.22)',
-                                'rgba(255,100,210,0)',
-                              ]
-                            : [
-                                'rgba(255,215,80,0)',
-                                'rgba(255,225,110,0.20)',
-                                'rgba(255,245,185,0.52)',
-                                'rgba(255,255,255,0.86)',
-                                'rgba(255,240,160,0.52)',
-                                'rgba(255,220,90,0.20)',
-                                'rgba(255,215,80,0)',
-                              ]
-                        }
-                        locations={[
-                          0,
-                          0.16,
-                          0.34,
-                          0.5,
-                          0.66,
-                          0.84,
-                          1,
-                        ]}
-                        start={{ x: 0.5, y: 0 }}
-                        end={{ x: 0.5, y: 1 }}
-                        style={{
-                          position: 'absolute',
-                          width: middleWidth,
-                          height: beam.length * 0.88,
-                          borderRadius:
-                            middleWidth / 2,
-                        }}
-                      />
-
-                      {/* 真ん中の白い芯 */}
-                      <LinearGradient
-                        colors={[
-                          'rgba(255,255,255,0)',
-                          'rgba(255,255,255,0.25)',
-                          'rgba(255,255,255,0.92)',
-                          'rgba(255,255,255,1)',
-                          'rgba(255,255,255,0.92)',
-                          'rgba(255,255,255,0.25)',
-                          'rgba(255,255,255,0)',
-                        ]}
-                        locations={[
-                          0,
-                          0.2,
-                          0.4,
-                          0.5,
-                          0.6,
-                          0.8,
-                          1,
-                        ]}
-                        start={{ x: 0.5, y: 0 }}
-                        end={{ x: 0.5, y: 1 }}
-                        style={{
-                          position: 'absolute',
-                          width: coreWidth,
-                          height: beam.length * 0.72,
-                          borderRadius:
-                            coreWidth / 2,
-                        }}
-                      />
-                    </Animated.View>
-                  );
-                }
-              )}
+              ))}
 
               <Animated.View
                 pointerEvents="none"
