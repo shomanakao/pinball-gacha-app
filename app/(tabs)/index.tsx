@@ -7,7 +7,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import Svg, { Polygon } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Matter from 'matter-js';
@@ -180,19 +180,55 @@ function Beam({
   opacity,
   scale,
 }: BeamProps) {
-  const width = rainbow ? 22 : 18;
+  const beamWidth = rainbow ? 14 : 10;
+  const centerYPosition = length / 2;
+
+  const createLensPath = (halfWidth: number) => {
+    return `
+      M ${beamWidth / 2} 0
+      C ${beamWidth / 2 + halfWidth * 0.15}
+        ${length * 0.24},
+        ${beamWidth / 2 + halfWidth}
+        ${length * 0.38},
+        ${beamWidth / 2 + halfWidth}
+        ${centerYPosition}
+
+      C ${beamWidth / 2 + halfWidth}
+        ${length * 0.62},
+        ${beamWidth / 2 + halfWidth * 0.15}
+        ${length * 0.76},
+        ${beamWidth / 2}
+        ${length}
+
+      C ${beamWidth / 2 - halfWidth * 0.15}
+        ${length * 0.76},
+        ${beamWidth / 2 - halfWidth}
+        ${length * 0.62},
+        ${beamWidth / 2 - halfWidth}
+        ${centerYPosition}
+
+      C ${beamWidth / 2 - halfWidth}
+        ${length * 0.38},
+        ${beamWidth / 2 - halfWidth * 0.15}
+        ${length * 0.24},
+        ${beamWidth / 2}
+        0
+
+      Z
+    `;
+  };
 
   return (
     <Animated.View
+      pointerEvents="none"
       style={{
         position: 'absolute',
-        width,
-        height: length,
-        left: centerX - width / 2,
+        left: centerX - beamWidth / 2,
         top: centerY - length / 2,
-        alignItems: 'center',
-        justifyContent: 'center',
+        width: beamWidth,
+        height: length,
         opacity,
+        zIndex: 52,
         transform: [
           {
             rotate: `${angle}deg`,
@@ -204,48 +240,56 @@ function Beam({
       }}
     >
       <Svg
-        width={width}
+        width={beamWidth}
         height={length}
+        viewBox={`0 0 ${beamWidth} ${length}`}
       >
-        {/* 外側 */}
-        <Polygon
-          points={`
-            ${width / 2},0
-            ${width},${length / 2}
-            ${width / 2},${length}
-            0,${length / 2}
-          `}
+        {/* 外側の薄い光 */}
+        <Path
+          d={createLensPath(
+            rainbow
+              ? beamWidth * 0.48
+              : beamWidth * 0.44
+          )}
           fill={
             rainbow
-              ? 'rgba(255,255,255,0.18)'
-              : 'rgba(255,235,120,0.22)'
+              ? 'rgba(255, 120, 240, 0.20)'
+              : 'rgba(255, 210, 50, 0.22)'
           }
         />
 
-        {/* 中間 */}
-        <Polygon
-          points={`
-            ${width / 2},${length * 0.1}
-            ${width * 0.82},${length / 2}
-            ${width / 2},${length * 0.9}
-            ${width * 0.18},${length / 2}
-          `}
+        {/* 中間の強い光 */}
+        <Path
+          d={createLensPath(
+            rainbow
+              ? beamWidth * 0.31
+              : beamWidth * 0.28
+          )}
           fill={
             rainbow
-              ? 'rgba(170,240,255,0.55)'
-              : 'rgba(255,250,200,0.58)'
+              ? 'rgba(110, 245, 255, 0.52)'
+              : 'rgba(255, 236, 120, 0.62)'
           }
         />
 
-        {/* 白い芯 */}
-        <Polygon
-          points={`
-            ${width / 2},${length * 0.22}
-            ${width * 0.62},${length / 2}
-            ${width / 2},${length * 0.78}
-            ${width * 0.38},${length / 2}
-          `}
-          fill="white"
+        {/* 中心の白い光 */}
+        <Path
+          d={createLensPath(
+            rainbow
+              ? beamWidth * 0.14
+              : beamWidth * 0.12
+          )}
+          fill={
+            rainbow
+              ? 'rgba(255, 255, 255, 0.96)'
+              : 'rgba(255, 255, 225, 0.98)'
+          }
+        />
+
+        {/* 最も明るい細い芯 */}
+        <Path
+          d={createLensPath(beamWidth * 0.045)}
+          fill="#FFFFFF"
         />
       </Svg>
     </Animated.View>
@@ -777,22 +821,22 @@ export default function HomeScreen() {
   const spotlightBeamConfigs =
     spotlightPin?.type === 'rainbow'
       ? [
-          { angle: 0, length: 190 },
-          { angle: 22.5, length: 155 },
-          { angle: 45, length: 175 },
-          { angle: 67.5, length: 150 },
-          { angle: 90, length: 185 },
-          { angle: 112.5, length: 160 },
-          { angle: 135, length: 170 },
-          { angle: 157.5, length: 150 },
+          { angle: 0, length: 250 },
+          { angle: 22.5, length: 190 },
+          { angle: 45, length: 230 },
+          { angle: 67.5, length: 180 },
+          { angle: 90, length: 250 },
+          { angle: 112.5, length: 190 },
+          { angle: 135, length: 230 },
+          { angle: 157.5, length: 180 },
         ]
       : [
-          { angle: 0, length: 180 },
-          { angle: 30, length: 145 },
-          { angle: 60, length: 160 },
-          { angle: 90, length: 175 },
-          { angle: 120, length: 150 },
-          { angle: 150, length: 165 },
+          { angle: 0, length: 220 },
+          { angle: 30, length: 170 },
+          { angle: 60, length: 200 },
+          { angle: 90, length: 220 },
+          { angle: 120, length: 170 },
+          { angle: 150, length: 200 },
         ];
 
   return (
