@@ -16,7 +16,8 @@ const { width, height } = Dimensions.get('window');
 
 const BALL_RADIUS = 18;
 const START_Y = 50;
-const RESULT_LINE_Y = height - 130;
+const WORLD_HEIGHT = height * 2.5;
+const RESULT_LINE_Y = WORLD_HEIGHT - 130;
 
 const UPGRADE_PIN_SLOW_DISTANCE = 80;
 
@@ -74,7 +75,7 @@ type PinData = {
 
 const PIN_RADIUS = 8;
 
-const PIN_ROWS = 5;
+const PIN_ROWS = 12;
 const PINS_PER_ROW = 4;
 const GOLD_PIN_COUNT = 3;
 const RAINBOW_PIN_COUNT = 1;
@@ -311,6 +312,8 @@ export default function HomeScreen() {
     y: START_Y,
   });
 
+  const [cameraY, setCameraY] = useState(0);
+
   const [showResult, setShowResult] = useState(false);
 
   const [visiblePins, setVisiblePins] = useState<PinData[]>(FIRST_PINS);
@@ -423,6 +426,7 @@ export default function HomeScreen() {
     currentPinsRef.current = newPins;
 
     setShowResult(false);
+    setCameraY(0);
 
     rarityRef.current = 'white';
     setRarity('white');
@@ -479,9 +483,9 @@ export default function HomeScreen() {
 
     const leftWall = Matter.Bodies.rectangle(
       -WALL_WIDTH / 2,
-      height / 2,
+      WORLD_HEIGHT / 2,
       WALL_WIDTH,
-      height,
+      WORLD_HEIGHT,
       {
         isStatic: true,
         restitution: 0.9,
@@ -492,9 +496,9 @@ export default function HomeScreen() {
 
     const rightWall = Matter.Bodies.rectangle(
       width + WALL_WIDTH / 2,
-      height / 2,
+      WORLD_HEIGHT / 2,
       WALL_WIDTH,
-      height,
+      WORLD_HEIGHT,
       {
         isStatic: true,
         restitution: 0.9,
@@ -769,6 +773,15 @@ export default function HomeScreen() {
         y: ball.position.y,
       });
 
+      const CAMERA_FOLLOW_Y = height * 0.45;
+
+      const nextCameraY = Math.max(
+        0,
+        ball.position.y - CAMERA_FOLLOW_Y
+      );
+
+      setCameraY(nextCameraY);
+
       if (ball.position.y >= RESULT_LINE_Y) {
         setShowResult(true);
         stopEngine();
@@ -858,7 +871,7 @@ export default function HomeScreen() {
                 isHit && styles.hitPin,
                 {
                   left: pin.x - PIN_RADIUS,
-                  top: pin.y - PIN_RADIUS,
+                  top: pin.y - cameraY - PIN_RADIUS,
                   transform: [
                     {
                       scale: isHit ? 1.7 : 1,
@@ -876,7 +889,7 @@ export default function HomeScreen() {
               styles.ball,
               {
                 left: ballPosition.x - BALL_RADIUS,
-                top: ballPosition.y - BALL_RADIUS,
+                top: ballPosition.y - cameraY - BALL_RADIUS,
                 backgroundColor: getBallColor(),
               },
             ]}
